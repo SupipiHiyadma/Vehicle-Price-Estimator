@@ -66,7 +66,6 @@
   thead th{background:var(--soft)}
   tfoot td{font-weight:800}
   .hl{background:rgba(255,215,0,.10)}
-  .hs th{background:rgba(255,215,0,.18)}
 </style>
 </head>
 <body>
@@ -84,11 +83,11 @@
       <div>
         <label for="fuel">Fuel Type</label>
         <select id="fuel">
-          <option>Petrol</option>
-          <option>Diesel</option>
-          <option selected>Petrol Hybrid</option>
-          <option>Diesel Hybrid</option>
-          <option>Electric Only</option>
+          <option value="Petrol">Petrol - 8703.21 - 8703.24</option>
+          <option value="Diesel">Diesel - 8703.31 - 8703.33</option>
+          <option value="Petrol Hybrid" selected>Petrol Hybrid - 8703.40 - 8703.60</option>
+          <option value="Diesel Hybrid">Diesel Hybrid - 8703.50 - 8703.70</option>
+          <option value="Electric Only">Electric Only - 8703.8</option>
         </select>
       </div>
       <div>
@@ -151,7 +150,7 @@
       </div>
     </div>
 
-    <!-- Sticky-ish summary on mobile -->
+    <!-- Summary -->
     <div class="summaryBar">
       <span>Per-vehicle: <span id="inlinePerVehicle">—</span></span>
       <span>Qty: <span id="inlineQty">1</span></span>
@@ -168,24 +167,7 @@
     </div>
   </section>
 
-  <!-- HS Code table -->
-  <section class="card">
-    <h2>HS Code Range</h2>
-    <div style="overflow:auto">
-      <table class="hs">
-        <thead><tr><th>Fuel Type</th><th>HS Code Range</th></tr></thead>
-        <tbody>
-          <tr><td>Petrol</td><td>8703.21 - 8703.24</td></tr>
-          <tr><td>Diesel</td><td>8703.31 - 8703.33</td></tr>
-          <tr><td>Petrol Hybrid</td><td>8703.40 - 8703.60</td></tr>
-          <tr><td>Diesel Hybrid</td><td>8703.50 - 8703.70</td></tr>
-          <tr><td>Electric Only</td><td>8703.8</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
-
-  <!-- Results -->
+  <!-- Results (HS code table removed as requested) -->
   <section class="card">
     <h2>Breakdown</h2>
     <div style="overflow:auto">
@@ -193,7 +175,7 @@
         <thead><tr><th>Component</th><th>Amount (LKR)</th></tr></thead>
         <tbody></tbody>
         <tfoot>
-          <tr><td>Total Duty</td><td id="totalDuty">—</td></tr>
+          <tr><td>Total Duty Per Vehicle</td><td id="totalDutyPerVehicle">—</td></tr>
           <tr class="hl"><td>Per-vehicle Cost</td><td id="totalPerVehicle">—</td></tr>
           <tr class="hl"><td>Number of Vehicles</td><td id="totalQty">—</td></tr>
           <tr class="hl"><td><b>Grand Total</b></td><td id="total">—</td></tr>
@@ -204,7 +186,7 @@
 </main>
 
 <script>
-  // Luxury Tax rules (gold & white app)
+  // Luxury Tax rules
   const LUX_RULES = {
     "Petrol":        { threshold: 5_000_000, rate: 1.00 },
     "Diesel":        { threshold: 5_000_000, rate: 1.20 },
@@ -213,7 +195,7 @@
     "Electric Only": { threshold: 6_000_000, rate: 0.60 }
   };
 
-  // Excise Duty bands (full list from your sheet)
+  // Excise Duty bands (full list)
   const EXCISE_BANDS = [
     { fuel:"Petrol", min:0,    max:999,     rate:2450 },
     { fuel:"Petrol", min:1000, max:1299,    rate:3850 },
@@ -330,8 +312,8 @@
     const qty = Math.max(1, +document.getElementById("qty").value || 1);
     const grandTotal = perVehicle * qty;
 
-    // Total Duty (all vehicles)
-    const totalDuty = grandTotal - (CIF * qty) - (admin * qty) - (other * qty);
+    // ✅ Total Duty Per Vehicle = Per-vehicle Cost − CIF − Admin − Other
+    const totalDutyPerVehicle = perVehicle - CIF - admin - other;
 
     // Breakdown rows (per vehicle)
     const rows = [
@@ -349,11 +331,13 @@
     document.querySelector("#result tbody").innerHTML =
       rows.map(([k,v]) => `<tr><td>${k}</td><td>${fmt(v)}</td></tr>`).join("");
 
-    document.getElementById("totalDuty").textContent = fmt(totalDuty);
+    // Totals
+    document.getElementById("totalDutyPerVehicle").textContent = fmt(totalDutyPerVehicle);
     document.getElementById("totalPerVehicle").textContent = fmt(perVehicle);
     document.getElementById("totalQty").textContent = fmt(qty);
     document.getElementById("total").textContent = fmt(grandTotal);
 
+    // Inline summary
     document.getElementById("inlinePerVehicle").textContent = fmt(perVehicle);
     document.getElementById("inlineQty").textContent = fmt(qty);
     document.getElementById("inlineTotal").textContent = fmt(grandTotal);
@@ -361,7 +345,7 @@
     updateVatBaseNote();
   }
 
-  // Live updates for a nice mobile feel
+  // Live updates
   ["fuel","cc","priceJpy","jpyRate","qty","vatCIF","vatCID","vatPAL","vatEX","vatLUX","adminPct","adminFlat","otherCharges"]
     .forEach(id=>{
       document.getElementById(id).addEventListener("input", ()=>{ updateLiveIndicators(); });
