@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Vehicle Cost Calculator</title>
+
+<!-- Brand colors -->
+<meta name="theme-color" content="#FFD700" />
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="icons/icon-192.svg">
+
+<style>
+  :root{
+    --gold:#FFD700; --gold-2:#E6BE8A; --text:#111827; --muted:#6B7280;
+    --card:#FFFFFF; --soft:#F9FAFB; --border:#E5E7EB; --warn:#FFF7CC; --warn-b:#FDE047;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --text:#F9FAFB; --muted:#C7D2FE; --card:#0B1220; --soft:#0F172A; --border:#24314A; --warn:#3A3200; --warn-b:#614D00; }
+    body{ background:#0A1222; }
+  }
+
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial;color:var(--text);background:#f6f8fc}
+
+  header{
+    background: linear-gradient(120deg, var(--gold), var(--gold-2));
+    color:#fff; padding:16px 14px; position:sticky; top:0; z-index:5;
+  }
+  header h1{margin:0;font-size:20px}
+  header .sub{font-size:12px;opacity:.95}
+
+  main{max-width:960px;margin:14px auto;padding:0 12px;display:grid;gap:12px}
+  @media (min-width:960px){ main{grid-template-columns:1.05fr .95fr} }
+
+  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;box-shadow:0 10px 24px rgba(2,8,23,.04);padding:14px}
+  h2{margin:0 0 10px;font-size:18px} h3{margin:8px 0;font-size:15px}
+  label{font-weight:600;font-size:14px;color:var(--muted)}
+  input,select{width:100%;padding:12px;border:1px solid var(--border);border-radius:12px;background:transparent;color:inherit;font:inherit;appearance:textfield}
+  input[type="number"]::-webkit-outer-spin-button,input[type="number"]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+
+  .row{display:grid;gap:10px;margin-bottom:10px}
+  .row.two{grid-template-columns:1fr 1fr}
+  .row.three{grid-template-columns:1fr 1fr 1fr}
+  @media (max-width:520px){ .row.two,.row.three{grid-template-columns:1fr} }
+
+  .btn{padding:12px 14px;border:0;border-radius:12px;background:var(--gold);color:#111;font-weight:800;cursor:pointer;width:100%}
+  .btn:active{transform:translateY(1px)}
+  .btn-row{display:grid;grid-template-columns:1fr;gap:10px}
+  @media (min-width:520px){ .btn-row{grid-template-columns:160px 1fr} }
+
+  .summaryBar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:var(--warn);border:1px solid var(--warn-b);border-radius:12px;font-weight:800;flex-wrap:wrap}
+  .summaryBar span{min-width:110px;display:inline-block}
+
+  .badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .badge{background:var(--soft);border:1px solid var(--border);border-radius:999px;padding:5px 10px;font-size:13px;white-space:nowrap}
+
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:8px;border-bottom:1px dashed var(--border);text-align:right}
+  th:first-child,td:first-child{text-align:left}
+  thead th{background:var(--soft)}
+  tfoot td{font-weight:800}
+  .hl{background:rgba(255,215,0,.10)}
+  .hs th{background:rgba(255,215,0,.18)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Vehicle Cost Calculator</h1>
+  <div class="sub">Gold & White · Mobile-friendly · PWA installable</div>
+</header>
+
+<main>
+  <!-- Inputs -->
+  <section class="card">
+    <h2>Inputs</h2>
+
+    <div class="row two">
+      <div>
+        <label for="fuel">Fuel Type</label>
+        <select id="fuel">
+          <option>Petrol</option>
+          <option>Diesel</option>
+          <option selected>Petrol Hybrid</option>
+          <option>Diesel Hybrid</option>
+          <option>Electric Only</option>
+        </select>
+      </div>
+      <div>
+        <label for="cc">Engine CC</label>
+        <input id="cc" type="number" inputmode="numeric" min="0" step="1" value="1500" placeholder="e.g. 1997" />
+      </div>
+    </div>
+
+    <div class="row two">
+      <div>
+        <label for="priceJpy">Vehicle Price (JPY)</label>
+        <input id="priceJpy" type="number" inputmode="numeric" step="0.01" value="19802" placeholder="e.g. 20000" />
+      </div>
+      <div>
+        <label for="jpyRate">JPY → LKR Rate</label>
+        <input id="jpyRate" type="number" inputmode="decimal" step="0.0001" value="2.1" placeholder="e.g. 2.10" />
+      </div>
+    </div>
+
+    <div class="row two">
+      <div>
+        <label for="otherCharges">Other Charges (manual)</label>
+        <input id="otherCharges" type="number" inputmode="numeric" step="0.01" value="150000" />
+      </div>
+      <div>
+        <label>Administration Charge (Importer’s Margin)</label>
+        <div class="row two" style="margin:0">
+          <div>
+            <input id="adminPct" type="number" inputmode="decimal" min="0" step="0.01" value="0" />
+            <div style="font-size:12px;color:var(--muted)">Percent of CIF (%)</div>
+          </div>
+          <div>
+            <input id="adminFlat" type="number" inputmode="numeric" min="0" step="0.01" value="0" />
+            <div style="font-size:12px;color:var(--muted)">OR flat amount (LKR)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VAT components toggle -->
+    <div class="card" style="margin-top:6px">
+      <h3 style="margin:0 0 8px">Included for VAT calculation (18%)</h3>
+      <div class="row two">
+        <label><input id="vatCIF" type="checkbox" checked> CIF</label>
+        <label><input id="vatCID" type="checkbox" checked> CID + Sur</label>
+        <label><input id="vatPAL" type="checkbox" checked> PAL</label>
+        <label><input id="vatEX"  type="checkbox" checked> Excise Duty</label>
+        <label><input id="vatLUX" type="checkbox" checked> Luxury Tax</label>
+      </div>
+      <div id="vatBaseNote" style="margin-top:6px;font-size:13px;color:var(--muted)"></div>
+    </div>
+
+    <div class="row two">
+      <div>
+        <label for="qty">Number of Vehicles</label>
+        <input id="qty" type="number" inputmode="numeric" min="1" step="1" value="1" />
+      </div>
+      <div class="btn-row" style="align-items:end">
+        <button id="calcBtn" class="btn">Calculate</button>
+      </div>
+    </div>
+
+    <!-- Sticky-ish summary on mobile -->
+    <div class="summaryBar">
+      <span>Per-vehicle: <span id="inlinePerVehicle">—</span></span>
+      <span>Qty: <span id="inlineQty">1</span></span>
+      <span>Total: <span id="inlineTotal">—</span></span>
+    </div>
+
+    <!-- Live badges -->
+    <div class="badges">
+      <div class="badge">Live CIF (LKR): <b id="liveCIF">—</b></div>
+      <div class="badge">Excise band: <b id="liveEXBand">—</b></div>
+      <div class="badge">Excise rate: <b id="liveEXRate">—</b></div>
+      <div class="badge">Luxury threshold: <b id="liveLuxThr">—</b></div>
+      <div class="badge">Luxury rate: <b id="liveLuxRate">—</b></div>
+    </div>
+  </section>
+
+  <!-- HS Code table -->
+  <section class="card">
+    <h2>HS Code Range</h2>
+    <div style="overflow:auto">
+      <table class="hs">
+        <thead><tr><th>Fuel Type</th><th>HS Code Range</th></tr></thead>
+        <tbody>
+          <tr><td>Petrol</td><td>8703.21 - 8703.24</td></tr>
+          <tr><td>Diesel</td><td>8703.31 - 8703.33</td></tr>
+          <tr><td>Petrol Hybrid</td><td>8703.40 - 8703.60</td></tr>
+          <tr><td>Diesel Hybrid</td><td>8703.50 - 8703.70</td></tr>
+          <tr><td>Electric Only</td><td>8703.8</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Results -->
+  <section class="card">
+    <h2>Breakdown</h2>
+    <div style="overflow:auto">
+      <table id="result">
+        <thead><tr><th>Component</th><th>Amount (LKR)</th></tr></thead>
+        <tbody></tbody>
+        <tfoot>
+          <tr><td>Total Duty</td><td id="totalDuty">—</td></tr>
+          <tr class="hl"><td>Per-vehicle Cost</td><td id="totalPerVehicle">—</td></tr>
+          <tr class="hl"><td>Number of Vehicles</td><td id="totalQty">—</td></tr>
+          <tr class="hl"><td><b>Grand Total</b></td><td id="total">—</td></tr>
+        </tfoot>
+      </table>
+    </div>
+  </section>
+</main>
+
+<script>
+  // Luxury Tax rules (gold & white app)
+  const LUX_RULES = {
+    "Petrol":        { threshold: 5_000_000, rate: 1.00 },
+    "Diesel":        { threshold: 5_000_000, rate: 1.20 },
+    "Petrol Hybrid": { threshold: 5_500_000, rate: 0.80 },
+    "Diesel Hybrid": { threshold: 5_500_000, rate: 0.90 },
+    "Electric Only": { threshold: 6_000_000, rate: 0.60 }
+  };
+
+  // Excise Duty bands (full list from your sheet)
+  const EXCISE_BANDS = [
+    { fuel:"Petrol", min:0,    max:999,     rate:2450 },
+    { fuel:"Petrol", min:1000, max:1299,    rate:3850 },
+    { fuel:"Petrol", min:1300, max:1499,    rate:4450 },
+    { fuel:"Petrol", min:1500, max:1599,    rate:5150 },
+    { fuel:"Petrol", min:1600, max:1799,    rate:6400 },
+    { fuel:"Petrol", min:1800, max:1999,    rate:7700 },
+    { fuel:"Petrol", min:2000, max:2499,    rate:8450 },
+    { fuel:"Petrol", min:2500, max:2749,    rate:9650 },
+    { fuel:"Petrol", min:2750, max:2999,    rate:10850 },
+    { fuel:"Petrol", min:3000, max:3999,    rate:12050 },
+    { fuel:"Petrol", min:4000, max:9_999_999, rate:13300 },
+
+    { fuel:"Diesel", min:0,    max:1499,    rate:5550 },
+    { fuel:"Diesel", min:1500, max:1599,    rate:6950 },
+    { fuel:"Diesel", min:1600, max:1799,    rate:8300 },
+    { fuel:"Diesel", min:1800, max:2499,    rate:9650 },
+    { fuel:"Diesel", min:2500, max:2749,    rate:10850 },
+    { fuel:"Diesel", min:2750, max:2999,    rate:12050 },
+    { fuel:"Diesel", min:3000, max:3999,    rate:13300 },
+    { fuel:"Diesel", min:4000, max:9_999_999, rate:14500 },
+
+    { fuel:"Petrol Hybrid", min:0,    max:1299,    rate:2750 },
+    { fuel:"Petrol Hybrid", min:1300, max:1499,    rate:3450 },
+    { fuel:"Petrol Hybrid", min:1500, max:1599,    rate:4800 },
+    { fuel:"Petrol Hybrid", min:1600, max:1999,    rate:6300 },
+    { fuel:"Petrol Hybrid", min:2000, max:2499,    rate:7250 },
+    { fuel:"Petrol Hybrid", min:2500, max:2749,    rate:8450 },
+    { fuel:"Petrol Hybrid", min:2750, max:2999,    rate:9650 },
+    { fuel:"Petrol Hybrid", min:3000, max:3999,    rate:10850 },
+    { fuel:"Petrol Hybrid", min:4000, max:9_999_999, rate:12050 },
+
+    { fuel:"Diesel Hybrid", min:0,    max:1499,    rate:4150 },
+    { fuel:"Diesel Hybrid", min:1500, max:1599,    rate:5550 },
+    { fuel:"Diesel Hybrid", min:1600, max:1799,    rate:6900 },
+    { fuel:"Diesel Hybrid", min:1800, max:1999,    rate:8350 },
+    { fuel:"Diesel Hybrid", min:2000, max:2499,    rate:8450 },
+    { fuel:"Diesel Hybrid", min:2500, max:2749,    rate:9650 },
+    { fuel:"Diesel Hybrid", min:2750, max:2999,    rate:10850 },
+    { fuel:"Diesel Hybrid", min:3000, max:3999,    rate:12050 },
+    { fuel:"Diesel Hybrid", min:4000, max:9_999_999, rate:13300 },
+  ];
+
+  const fmt = n => isFinite(n) ? Number(n).toLocaleString(undefined,{maximumFractionDigits:0}) : "—";
+
+  function cif() {
+    const price = +document.getElementById("priceJpy").value || 0;
+    const rate  = +document.getElementById("jpyRate").value || 0;
+    return price * rate;
+  }
+
+  function findExcise(fuel, cc) {
+    const list = EXCISE_BANDS.filter(r => r.fuel.toLowerCase() === fuel.toLowerCase());
+    return list.find(r => cc >= r.min && cc <= r.max) || null;
+  }
+
+  function updateVatBaseNote() {
+    const parts = [];
+    if (document.getElementById('vatCIF').checked) parts.push('CIF');
+    if (document.getElementById('vatCID').checked) parts.push('CID+Sur');
+    if (document.getElementById('vatPAL').checked) parts.push('PAL');
+    if (document.getElementById('vatEX').checked)  parts.push('Excise');
+    if (document.getElementById('vatLUX').checked) parts.push('Luxury');
+    document.getElementById('vatBaseNote').textContent =
+      parts.length ? `VAT base includes: ${parts.join(' + ')}` : 'VAT base includes: (none selected)';
+  }
+
+  function updateLiveIndicators() {
+    const fuel = document.getElementById("fuel").value;
+    const cc   = +document.getElementById("cc").value || 0;
+    const c    = cif();
+    const ex   = findExcise(fuel, cc);
+    const lux  = LUX_RULES[fuel];
+
+    document.getElementById("liveCIF").textContent = fmt(c);
+    document.getElementById("liveEXBand").textContent = ex ? `${fuel} • ${ex.min}-${ex.max} cc` : "—";
+    document.getElementById("liveEXRate").textContent = ex ? `${ex.rate.toLocaleString()} per cc` : "—";
+    document.getElementById("liveLuxThr").textContent  = lux ? `${lux.threshold.toLocaleString()}` : "—";
+    document.getElementById("liveLuxRate").textContent = lux ? `${(lux.rate*100).toFixed(0)}%` : "—";
+    updateVatBaseNote();
+  }
+
+  function calc() {
+    const fuel = document.getElementById("fuel").value;
+    const cc   = +document.getElementById("cc").value || 0;
+    const CIF  = cif();
+
+    const cid = 0.30 * CIF;        // CID + Surcharge
+    const pal = 0.10 * CIF;        // PAL
+    const exBand = findExcise(fuel, cc);
+    const excise = exBand ? exBand.rate * cc : 0;   // CC × Rate
+
+    const lux = LUX_RULES[fuel] || {threshold:0, rate:0};
+    const luxury = Math.max(0, CIF - lux.threshold) * lux.rate;
+
+    // VAT base: user-selected components
+    const vatBase =
+      (document.getElementById('vatCIF').checked ? CIF : 0) +
+      (document.getElementById('vatCID').checked ? cid : 0) +
+      (document.getElementById('vatPAL').checked ? pal : 0) +
+      (document.getElementById('vatEX').checked  ? excise : 0) +
+      (document.getElementById('vatLUX').checked ? luxury : 0);
+
+    const vat = 0.18 * vatBase;
+
+    const vel = 15000, exm = 1750;
+
+    const admin = ((+document.getElementById("adminPct").value || 0)/100) * CIF
+                + (+document.getElementById("adminFlat").value || 0);
+    const other = +document.getElementById("otherCharges").value || 0;
+
+    // Per-vehicle & grand totals
+    const perVehicle = CIF + cid + pal + excise + luxury + vat + vel + exm + admin + other;
+    const qty = Math.max(1, +document.getElementById("qty").value || 1);
+    const grandTotal = perVehicle * qty;
+
+    // Total Duty (all vehicles)
+    const totalDuty = grandTotal - (CIF * qty) - (admin * qty) - (other * qty);
+
+    // Breakdown rows (per vehicle)
+    const rows = [
+      ["CIF (LKR)", CIF],
+      ["CID + Sur (30% of CIF)", cid],
+      ["PAL (10% of CIF)", pal],
+      ["Excise Duty (CC × Rate)", excise],
+      ["Luxury Tax", luxury],
+      ["VAT", vat],
+      ["VEL (fixed)", vel],
+      ["EXM (fixed)", exm],
+      ["Administration Charge", admin],
+      ["Other Charges (manual)", other],
+    ];
+    document.querySelector("#result tbody").innerHTML =
+      rows.map(([k,v]) => `<tr><td>${k}</td><td>${fmt(v)}</td></tr>`).join("");
+
+    document.getElementById("totalDuty").textContent = fmt(totalDuty);
+    document.getElementById("totalPerVehicle").textContent = fmt(perVehicle);
+    document.getElementById("totalQty").textContent = fmt(qty);
+    document.getElementById("total").textContent = fmt(grandTotal);
+
+    document.getElementById("inlinePerVehicle").textContent = fmt(perVehicle);
+    document.getElementById("inlineQty").textContent = fmt(qty);
+    document.getElementById("inlineTotal").textContent = fmt(grandTotal);
+
+    updateVatBaseNote();
+  }
+
+  // Live updates for a nice mobile feel
+  ["fuel","cc","priceJpy","jpyRate","qty","vatCIF","vatCID","vatPAL","vatEX","vatLUX","adminPct","adminFlat","otherCharges"]
+    .forEach(id=>{
+      document.getElementById(id).addEventListener("input", ()=>{ updateLiveIndicators(); });
+      document.getElementById(id).addEventListener("change", ()=>{ updateLiveIndicators(); });
+    });
+
+  document.getElementById("calcBtn").addEventListener("click", ()=>{ updateLiveIndicators(); calc(); });
+  window.addEventListener("DOMContentLoaded", ()=>{ updateLiveIndicators(); calc(); });
+</script>
+
+<!-- PWA: register the service worker -->
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js', { scope: './' })
+        .catch(err => console.error('SW registration failed:', err));
+    });
+  }
+</script>
+</body>
+</html>
